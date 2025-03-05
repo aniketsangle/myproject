@@ -247,4 +247,179 @@ Now, NA, -, 0, and None are replaced with NULL in MySQL.
 Let me know if you need modifications!
 
 
+When inserting data from a Pandas DataFrame into a MySQL database, you need to handle NaN values properly. MySQL does not recognize NaN for NULL values, so you must convert them before inserting.
+
+Solution Approach:
+
+1. Convert NaN to None: MySQL understands NULL, which in Python is represented by None.
+
+
+2. Use sqlalchemy or pymysql to insert the DataFrame into MySQL.
+
+
+3. Ensure the database allows NULL for applicable columns.
+
+
+
+
+---
+
+Example Using sqlalchemy
+
+import pandas as pd
+from sqlalchemy import create_engine
+
+# Sample DataFrame with NaN values
+data = {
+    'id': [1, 2, 3],
+    'name': ['Alice', 'Bob', None],  # None or NaN in string column
+    'age': [25, None, 30],           # None or NaN in numeric column
+}
+
+df = pd.DataFrame(data)
+
+# Replace NaN with None (NULL in MySQL)
+df = df.where(pd.notna(df), None)
+
+# MySQL Connection (Modify your credentials)
+engine = create_engine("mysql+pymysql://username:password@localhost/dbname")
+
+# Insert DataFrame into MySQL (replace with your table name)
+df.to_sql('your_table', con=engine, if_exists='append', index=False)
+
+
+---
+
+Alternative Using pymysql
+
+If you are using raw pymysql instead of sqlalchemy:
+
+import pymysql
+
+# MySQL Connection
+conn = pymysql.connect(host='localhost', user='root', password='password', database='dbname')
+cursor = conn.cursor()
+
+# Replace NaN with None
+df = df.where(pd.notna(df), None)
+
+# Insert data manually
+for _, row in df.iterrows():
+    cursor.execute("INSERT INTO your_table (id, name, age) VALUES (%s, %s, %s)", 
+                   (row['id'], row['name'], row['age']))
+
+conn.commit()
+cursor.close()
+conn.close()
+
+
+---
+
+Key Takeaways:
+
+Convert NaN to None before inserting.
+
+Use to_sql() for easier bulk insertion.
+
+Use pymysql or sqlalchemy for better database interaction.
+
+
+This will correctly store NULL values in MySQL instead of NaN. Let me know if you need modifications!
+
+
+To clean your DataFrame and convert unclean data into NULL (i.e., None in Python) before inserting it into a MySQL database, follow these steps:
+
+
+---
+
+Step 1: Identify Unclean Data
+
+Unclean data may include:
+
+Empty strings ("" or ' ' or multiple spaces)
+
+Strings like "NULL", "NaN", "None"
+
+Invalid values (e.g., "?", "unknown")
+
+Whitespace-only strings
+
+Incorrect data types (e.g., numbers stored as strings)
+
+
+
+---
+
+Step 2: Replace Unclean Data with None (NULL in MySQL)
+
+You can use Pandas' replace() and applymap() functions to clean the DataFrame.
+
+import pandas as pd
+from sqlalchemy import create_engine
+
+# Sample unclean data
+data = {
+    'id': [1, 2, 3, 4],
+    'name': ['Alice', '', 'NULL', '  '],  # Empty string, 'NULL', and spaces should become NULL
+    'age': [25, 'unknown', None, 30],     # 'unknown' should become NULL
+}
+
+df = pd.DataFrame(data)
+
+# Define unclean values to replace with None (NULL)
+unclean_values = ["", " ", "NULL", "None", "NaN", "unknown", "?", "n/a", "N/A", "null"]
+
+# Apply cleaning: strip spaces and replace unclean values with None
+df = df.applymap(lambda x: None if str(x).strip() in unclean_values or pd.isna(x) else x)
+
+# Check cleaned data
+print(df)
+
+
+---
+
+Step 3: Insert Cleaned Data into MySQL
+
+Once the data is clean, insert it into MySQL using sqlalchemy:
+
+# MySQL Connection (Modify your credentials)
+engine = create_engine("mysql+pymysql://username:password@localhost/dbname")
+
+# Insert DataFrame into MySQL
+df.to_sql('your_table', con=engine, if_exists='append', index=False)
+
+
+---
+
+Alternative: Using pymysql for Manual Insertion
+
+If you're using pymysql, manually insert data:
+
+import pymysql
+
+# MySQL Connection
+conn = pymysql.connect(host='localhost', user='root', password='password', database='dbname')
+cursor = conn.cursor()
+
+# Insert data manually
+for _, row in df.iterrows():
+    cursor.execute("INSERT INTO your_table (id, name, age) VALUES (%s, %s, %s)", 
+                   (row['id'], row['name'], row['age']))
+
+conn.commit()
+cursor.close()
+conn.close()
+
+
+---
+
+Key Takeaways
+
+✅ Identify unclean data (empty strings, special values, spaces).
+✅ Convert them into None so MySQL stores them as NULL.
+✅ Use applymap() with a list of unclean values for easy replacement.
+✅ Insert cleaned data using to_sql() or pymysql.
+
+This ensures your MySQL database gets clean, structured data. Let me know if you need modifications!
+
 
