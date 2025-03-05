@@ -1,0 +1,250 @@
+Regex patterns for validation
+
+phone_pattern = re.compile(r"^\d{10}$")  # Ensures exactly 10 digits
+email_pattern = re.compile(r"^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+.[a-zA-Z]{2,}$")  # Standard email format
+
+Function to validate and clean phone numbers
+
+def validate_phone_numbers(value):
+if pd.isna(value) or value.strip() == "":
+return None, None
+numbers = [x.strip() for x in value.split(",")]  # Split and clean spaces
+valid_numbers = [num for num in numbers if phone_pattern.match(num)]  # Filter valid numbers
+return (valid_numbers[0], valid_numbers[1]) if len(valid_numbers) > 1 else (valid_numbers[0] if valid_numbers else None, None)
+
+Function to validate and clean email addresses
+
+def validate_emails(value):
+if pd.isna(value) or value.strip() == "":
+return None, None
+emails = [x.strip() for x in value.split(",")]  # Split and clean spaces
+valid_emails = [email for email in emails if email_pattern.match(email)]  # Filter valid emails
+return (valid_emails[0], valid_emails[1]) if len(valid_emails) > 1 else (valid_emails[0] if valid_emails else None, None)
+
+Apply validation functions
+
+df[['Primary_Mobile', 'Secondary_Mobile']] = df['PhoneNumbers'].apply(lambda x: pd.Series(validate_phone_numbers(x)))
+df[['Primary_Email', 'Secondary_Email']] = df['Emails'].apply(lambda x: pd.Series(validate_emails(x)))
+
+Fill NaN values with empty strings
+
+df.fillna("", inplace=True)
+
+Display the cleaned DataFrame
+
+print(df)
+
+Giving an error as "int object has no attribute as string" for phone number
+
+
+
+The error "int object has no attribute 'strip'" suggests that some values in your PhoneNumbers column are integers instead of strings or NaN values. This happens because pandas sometimes infers numeric values when reading data from an Excel or CSV file.
+
+Solution
+
+Ensure all values in the PhoneNumbers column are treated as strings before processing them. Modify your validate_phone_numbers function as follows:
+
+import re
+import pandas as pd
+
+# Define regex patterns
+phone_pattern = re.compile(r"^\d{10}$")  # Ensures exactly 10 digits
+email_pattern = re.compile(r"^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$")  # Standard email format
+
+# Function to validate and clean phone numbers
+def validate_phone_numbers(value):
+    if pd.isna(value) or str(value).strip() == "":  # Convert to string
+        return None, None
+    numbers = [str(x).strip() for x in str(value).split(",")]  # Convert all elements to strings
+    valid_numbers = [num for num in numbers if phone_pattern.match(num)]  # Filter valid numbers
+    return (valid_numbers[0], valid_numbers[1]) if len(valid_numbers) > 1 else (valid_numbers[0] if valid_numbers else None, None)
+
+# Function to validate and clean email addresses
+def validate_emails(value):
+    if pd.isna(value) or str(value).strip() == "":  # Convert to string
+        return None, None
+    emails = [str(x).strip() for x in str(value).split(",")]  # Convert all elements to strings
+    valid_emails = [email for email in emails if email_pattern.match(email)]  # Filter valid emails
+    return (valid_emails[0], valid_emails[1]) if len(valid_emails) > 1 else (valid_emails[0] if valid_emails else None, None)
+
+# Sample DataFrame
+data = {
+    "PhoneNumbers": [9876543210, "1234567890, 9876543210", None, "0987654321", "12345, 123456789012"]
+}
+df = pd.DataFrame(data)
+
+# Apply validation functions
+df[['Primary_Mobile', 'Secondary_Mobile']] = df['PhoneNumbers'].apply(lambda x: pd.Series(validate_phone_numbers(x)))
+df.fillna("", inplace=True)
+
+# Display the cleaned DataFrame
+print(df)
+
+Changes & Fixes
+
+1. Ensure all values are treated as strings: str(value).strip() prevents integer errors.
+
+
+2. Convert individual elements to strings before applying .strip(), preventing attribute errors.
+
+
+3. Handled NaN values correctly using pd.isna(value).
+
+
+
+This should resolve the error and ensure your script runs correctly.
+
+
+
+
+Here is the corrected and optimized code:
+
+import re
+import pandas as pd
+
+# Define regex patterns
+phone_pattern = re.compile(r"^\d{10}$")  # Ensures exactly 10 digits
+email_pattern = re.compile(r"^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$")  # Standard email format
+
+# Function to validate and clean phone numbers
+def validate_phone_numbers(value):
+    if pd.isna(value) or str(value).strip() == "":  # Convert to string if not NaN
+        return None, None
+    numbers = [num.strip() for num in str(value).split(",")]  # Convert all to string, then split
+    valid_numbers = [num for num in numbers if phone_pattern.match(num)]  # Filter valid numbers
+    return (valid_numbers + [None, None])[:2]  # Ensure two values are returned
+
+# Function to validate and clean email addresses
+def validate_emails(value):
+    if pd.isna(value) or str(value).strip() == "":  # Convert to string if not NaN
+        return None, None
+    emails = [email.strip() for email in str(value).split(",")]  # Convert all to string, then split
+    valid_emails = [email for email in emails if email_pattern.match(email)]  # Filter valid emails
+    return (valid_emails + [None, None])[:2]  # Ensure two values are returned
+
+# Sample DataFrame
+data = {
+    "PhoneNumbers": [9876543210, "1234567890, 9876543210", None, "0987654321", "12345, 123456789012"],
+    "Emails": ["test@example.com, invalid-email", "valid1@email.com, valid2@email.com", None, "wrong@com", "user@domain.com"]
+}
+df = pd.DataFrame(data)
+
+# Apply validation functions
+df[['Primary_Mobile', 'Secondary_Mobile']] = df['PhoneNumbers'].apply(lambda x: pd.Series(validate_phone_numbers(x)))
+df[['Primary_Email', 'Secondary_Email']] = df['Emails'].apply(lambda x: pd.Series(validate_emails(x)))
+
+# Fill NaN values with empty strings
+df.fillna("", inplace=True)
+
+# Display the cleaned DataFrame
+print(df)
+
+Improvements & Fixes
+
+1. Ensures all values are treated as strings: str(value).strip(), preventing integer-related errors.
+
+
+2. Handles missing/invalid numbers properly: If a number is missing, it returns (None, None).
+
+
+3. Guarantees two return values: (valid_numbers + [None, None])[:2] ensures the function always returns two values.
+
+
+4. Applies the same logic for emails, ensuring only valid emails are extracted.
+
+
+
+This version should work without errors and correctly extract primary and secondary phone numbers and emails.
+
+
+
+
+To replace values like NA, -, 0, or None with NULL in MySQL database tables using Python and Pandas, follow these steps:
+
+Steps to Achieve This:
+
+1. Read the data into a Pandas DataFrame.
+
+
+2. Replace unwanted values (NA, -, 0, None) with NaN using replace().
+
+
+3. Use to_sql() to insert/update records in MySQL, ensuring NaN values are stored as NULL.
+
+
+
+
+---
+
+Code Implementation
+
+import pandas as pd
+import mysql.connector
+from sqlalchemy import create_engine
+
+# Step 1: Sample DataFrame
+data = {
+    "ID": [1, 2, 3, 4, 5],
+    "Name": ["Alice", "Bob", "NA", "-", None],
+    "Age": [25, 0, 30, "-", "NA"],
+    "Salary": [50000, None, "-", 0, "NA"]
+}
+df = pd.DataFrame(data)
+
+# Step 2: Replace unwanted values with NaN (NULL equivalent)
+df.replace(["NA", "-", 0, None], pd.NA, inplace=True)
+
+# Step 3: Connect to MySQL database
+db_url = "mysql+mysqlconnector://username:password@localhost/dbname"
+engine = create_engine(db_url)
+
+# Step 4: Insert DataFrame into MySQL table (replace with your table name)
+df.to_sql("employees", con=engine, if_exists="replace", index=False)
+
+print("Data inserted successfully with NULL values.")
+
+
+---
+
+Explanation
+
+replace(["NA", "-", 0, None], pd.NA, inplace=True)
+
+Replaces NA, -, 0, and None with NaN, which to_sql() converts to NULL in MySQL.
+
+
+to_sql()
+
+Writes the DataFrame to the MySQL table, automatically handling NaN as NULL.
+
+
+
+Alternative (Updating Existing Data)
+
+If you already have a table and want to update specific columns to NULL, use SQL UPDATE queries with pymysql or mysql-connector-python:
+
+conn = mysql.connector.connect(user='username', password='password', host='localhost', database='dbname')
+cursor = conn.cursor()
+
+update_query = """
+UPDATE employees
+SET Name = NULL WHERE Name IN ('NA', '-');
+"""
+cursor.execute(update_query)
+conn.commit()
+cursor.close()
+conn.close()
+
+print("Updated existing records with NULL values.")
+
+
+---
+
+Final Output (Stored in MySQL)
+
+Now, NA, -, 0, and None are replaced with NULL in MySQL.
+
+Let me know if you need modifications!
+
+
+
